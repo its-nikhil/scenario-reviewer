@@ -152,6 +152,9 @@
     .btn.danger { background: var(--surface); color: var(--danger); border-color: var(--border); }
     .btn.danger:hover:not(:disabled) { background: var(--danger-bg); border-color: var(--danger); }
     
+    .btn.warning { background: var(--surface); color: var(--warning-text); border-color: var(--warning); }
+    .btn.warning:hover:not(:disabled) { background: var(--warning-bg); border-color: var(--warning); }
+    
     .btn.ghost { background: transparent; color: var(--text-muted); border-color: transparent; box-shadow: none; }
     .btn.ghost:hover:not(:disabled) { background: var(--surface-hover); color: var(--text-main); }
 
@@ -391,6 +394,7 @@
     .badge.valid { background: var(--success-bg); color: var(--success-text); border-color: var(--success-border); }
     .badge.invalid { background: var(--danger-bg); color: var(--danger-text); border-color: var(--error-border); }
     .badge.unreviewed { background: var(--unreviewed-bg); color: var(--unreviewed-text); border-color: var(--unreviewed-border); }
+    .badge.warning { background: var(--warning-bg); color: var(--warning-text); border-color: #fcd34d; }
 
     .response-body {
       padding: 1.5rem;
@@ -648,6 +652,7 @@
     .status-icon.valid { background: var(--success-bg); color: var(--success); }
     .status-icon.invalid { background: var(--danger-bg); color: var(--danger); }
     .status-icon.unreviewed { background: var(--unreviewed-bg); border: 2px solid var(--border-strong); }
+    .status-icon.warning { background: var(--warning-bg); color: var(--warning); }
 
     .index-label {
       font-size: 0.9rem;
@@ -1125,6 +1130,7 @@
     function getStatusInfo(isValid) {
       if (isValid === true) return { class: 'valid', text: 'Approved', icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' };
       if (isValid === false) return { class: 'invalid', text: 'Changes Requested', icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' };
+      if (isValid === 'later') return { class: 'warning', text: 'Review Later', icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>' };
       return { class: 'unreviewed', text: 'Unreviewed', icon: '' };
     }
 
@@ -1161,7 +1167,7 @@
       scenarios.forEach(s => {
         s.responses.forEach(r => {
           totalResponses++;
-          if (r.is_valid !== null) reviewedResponses++;
+          if (r.is_valid === true || r.is_valid === false) reviewedResponses++;
         });
       });
 
@@ -1200,15 +1206,18 @@
 
     window.reviewOption = function(idx, isValid) {
       scenarios[currentIndex].responses[idx].is_valid = isValid;
-      editingCards.delete(idx); // close edit mode if open
+      editingCards.delete(idx);
       renderCurrentScenario();
       updateGlobalProgress();
       
-      // Auto-advance to next unreviewed
-      const nextIdx = scenarios[currentIndex].responses.findIndex(r => r.is_valid === null);
-      if (nextIdx !== -1) {
+      let nextIdx = scenarios[currentIndex].responses.findIndex((r, i) => i > idx && r.is_valid === null);
+      if (nextIdx === -1) {
+        nextIdx = scenarios[currentIndex].responses.findIndex(r => r.is_valid === null);
+      }
+
+      if (nextIdx !== -1 && nextIdx !== idx) {
         document.getElementById(`response-${nextIdx}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else {
+      } else if (nextIdx === -1) {
         showToast("All options in this scenario reviewed!");
       }
     };
@@ -1303,7 +1312,7 @@
 
       responses.forEach((resp, idx) => {
         const status = getStatusInfo(resp.is_valid);
-        if (resp.is_valid !== null) reviewedInScenario++;
+        if (resp.is_valid === true || resp.is_valid === false) reviewedInScenario++;
         const responseId = `response-${idx}`;
         
         // Build Main Card
@@ -1375,15 +1384,24 @@
         </div>
 
         <div class="response-actions">
-          <button class="btn ${resp.is_valid === true ? 'success' : 'secondary'}" onclick="reviewOption(${idx}, true)" style="flex: 1; padding: 0.75rem; height: 52px;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
-            Approve
+          <button class="btn ${resp.is_valid === true ? 'success' : 'secondary'}" onclick="reviewOption(${idx}, true)" style="flex: 1; padding: 0.75rem; height: 52px; display: flex; align-items: center; justify-content: center; gap: 0.5rem; line-height: 1.1;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+              <span>Approve</span>
+            </div>
           </button>
           <button class="btn ${resp.is_valid === false ? 'danger' : 'secondary'}" onclick="reviewOption(${idx}, false)" style="flex: 1; padding: 0.75rem; height: 52px; display: flex; align-items: center; justify-content: center; gap: 0.5rem; line-height: 1.1;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg>
             <div style="display: flex; flex-direction: column; align-items: flex-start;">
               <span>Request</span>
               <span>Changes</span>
+            </div>
+          </button>
+          <button class="btn ${resp.is_valid === 'later' ? 'warning' : 'secondary'}" onclick="reviewOption(${idx}, 'later')" style="flex: 1; padding: 0.75rem; height: 52px; display: flex; align-items: center; justify-content: center; gap: 0.5rem; line-height: 1.1;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+              <span>Review</span>
+              <span>Later</span>
             </div>
           </button>
           ${resp.is_valid !== null ? `
@@ -1462,6 +1480,9 @@
     }
 
     // Navigation Logic
+    prevBtn.addEventListener('click', goPrev);
+    nextBtn.addEventListener('click', goNext);
+
     function goNext() {
       if (currentIndex < scenarios.length - 1) {
         currentIndex++;
