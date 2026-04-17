@@ -1,0 +1,1664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scenario Reviewer</title>
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --surface: #ffffff;
+      --surface-hover: #f8fafc;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-soft: #e0e7ff;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      
+      --success: #10b981;
+      --success-bg: #d1fae5;
+      --success-text: #065f46;
+      
+      --danger: #ef4444;
+      --danger-bg: #fee2e2;
+      --danger-text: #991b1b;
+      
+      --warning: #f59e0b;
+      --warning-bg: #fef3c7;
+      --warning-text: #92400e;
+
+      --unreviewed: #94a3b8;
+      --unreviewed-bg: #f1f5f9;
+      --unreviewed-text: #475569;
+
+      --radius-lg: 16px;
+      --radius: 12px;
+      --radius-sm: 8px;
+      
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* --- Upload Screen --- */
+    #upload-screen {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      background: radial-gradient(circle at top right, #e0e7ff 0%, transparent 40%), var(--bg);
+    }
+
+    .upload-container {
+      background: var(--surface);
+      padding: 3rem;
+      border-radius: var(--radius-lg);
+      text-align: center;
+      max-width: 540px;
+      width: 100%;
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.01);
+    }
+
+    .upload-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.5rem;
+    }
+
+    .upload-container h1 {
+      margin-bottom: 0.5rem;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .upload-container p {
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--border-strong);
+      border-radius: var(--radius);
+      padding: 2.5rem 1.5rem;
+      transition: all 0.2s;
+      cursor: pointer;
+      background: var(--surface-hover);
+    }
+
+    .drop-zone.dragover {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .drop-zone-text {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--text-main);
+    }
+
+    .btn {
+      background: var(--primary);
+      color: white;
+      border: 1px solid transparent;
+      padding: 0.6rem 1.2rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+    }
+
+    .btn:hover:not(:disabled) { background: var(--primary-hover); }
+    .btn:active:not(:disabled) { transform: translateY(1px); }
+    
+    .btn.secondary {
+      background: var(--surface);
+      color: var(--text-main);
+      border-color: var(--border-strong);
+    }
+    .btn.secondary:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--text-muted); }
+    
+    .btn.success { background: var(--success); color: white; }
+    .btn.success:hover:not(:disabled) { background: #059669; }
+    
+    .btn.danger { background: var(--surface); color: var(--danger); border-color: var(--border); }
+    .btn.danger:hover:not(:disabled) { background: var(--danger-bg); border-color: var(--danger); }
+    
+    .btn.ghost { background: transparent; color: var(--text-muted); border-color: transparent; box-shadow: none; }
+    .btn.ghost:hover:not(:disabled) { background: var(--surface-hover); color: var(--text-main); }
+
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* --- Viewer Screen --- */
+    #viewer-screen {
+      display: none;
+      flex-direction: column;
+      height: 100vh;
+      background: var(--bg);
+    }
+
+    /* Top Navigation Bar */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+      z-index: 20;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text-main);
+      min-width: max-content;
+    }
+
+    .header-brand svg { color: var(--primary); }
+
+    .global-progress {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: var(--surface-hover);
+      padding: 0.4rem 1rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+    }
+
+    .progress-track {
+      width: 100px;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--success);
+      transition: width 0.3s ease;
+    }
+
+    .search-container {
+      flex: 1;
+      max-width: 480px;
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 0.5rem 1rem 0.5rem 2.25rem;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      background: var(--surface);
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-soft);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .search-results {
+      position: absolute;
+      top: calc(100% + 0.5rem);
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+    }
+
+    .search-result-item {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .search-result-item:hover, .search-result-item.active { background: var(--surface-hover); }
+    .search-result-title { font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem; color: var(--text-main); }
+    .search-result-snippet { font-size: 0.75rem; color: var(--text-muted); }
+    mark.highlight { background: #fef08a; color: #92400e; font-weight: 600; padding: 0 2px; border-radius: 2px; }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    /* --- Main Layout --- */
+    .app-main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Left Column: Scenario & Responses */
+    .scenario-column {
+      flex: 1;
+      overflow-y: auto;
+      padding: 2rem;
+      scroll-behavior: smooth;
+    }
+
+    .scenario-container {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .scenario-header {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 1.5rem 2rem;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgb(0 0 0 / 0.05);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .scenario-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .scenario-nav-left {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: 1rem;
+    }
+
+    .scenario-counter {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .scenario-text {
+      font-size: 1.25rem;
+      font-weight: 600;
+      line-height: 1.5;
+      color: var(--text-main);
+    }
+
+    /* Response Cards */
+    .response-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+      overflow: hidden;
+      scroll-margin-top: 140px; /* Account for sticky header */
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .response-card:focus-within, .response-card:hover {
+      border-color: var(--border-strong);
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+    }
+
+    .response-header {
+      padding: 1rem 1.5rem;
+      background: var(--surface-hover);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .response-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .badge {
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      border: 1px solid transparent;
+    }
+
+    .badge.valid { background: var(--success-bg); color: var(--success-text); border-color: var(--success-border); }
+    .badge.invalid { background: var(--danger-bg); color: var(--danger-text); border-color: var(--error-border); }
+    .badge.unreviewed { background: var(--unreviewed-bg); color: var(--unreviewed-text); border-color: var(--unreviewed-border); }
+
+    .response-body {
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Context / Goal Block */
+    .evaluation-context {
+      background: var(--primary-soft);
+      border: 1px solid #c7d2fe;
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.25rem;
+    }
+
+    .context-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--primary-hover);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .context-text {
+      font-size: 0.95rem;
+      color: var(--text-main);
+      line-height: 1.5;
+    }
+
+    /* Chat Area */
+    .chat-area {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      padding: 1rem;
+      background: var(--surface-hover);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    .chat-bubble {
+      max-width: 85%;
+      padding: 0.85rem 1.15rem;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      position: relative;
+    }
+
+    .bubble-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .chat-captain {
+      align-self: flex-start;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-bottom-left-radius: 4px;
+      color: var(--text-main);
+    }
+    .chat-captain .bubble-label { color: var(--text-muted); }
+
+    .chat-agent {
+      align-self: flex-end;
+      background: var(--primary);
+      color: white;
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 2px 4px rgb(79 70 229 / 0.2);
+    }
+    .chat-agent .bubble-label { color: rgba(255,255,255,0.8); }
+
+    /* Notes & Tags */
+    .meta-section {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .notes-box {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+
+    .notes-box svg { flex-shrink: 0; color: var(--text-muted); margin-top: 2px; }
+
+    .tags-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      background: var(--surface-hover);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    /* Action Bar (Footer of card) */
+    .response-actions {
+      padding: 1rem 1.5rem;
+      background: var(--surface-hover);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    /* --- Edit Mode Forms --- */
+    .edit-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .form-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.9rem;
+      background: var(--surface);
+      color: var(--text-main);
+      transition: all 0.2s;
+    }
+
+    textarea.form-control {
+      min-height: 80px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-soft);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    /* Right Rail: Review Index */
+    .review-rail {
+      width: 320px;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+    }
+
+    .rail-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-hover);
+    }
+
+    .rail-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .rail-summary {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .rail-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+
+    .index-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .index-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .index-item:hover {
+      background: var(--surface-hover);
+      border-color: var(--border);
+    }
+
+    .index-item-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .status-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .status-icon.valid { background: var(--success-bg); color: var(--success); }
+    .status-icon.invalid { background: var(--danger-bg); color: var(--danger); }
+    .status-icon.unreviewed { background: var(--unreviewed-bg); border: 2px solid var(--border-strong); }
+
+    .index-label {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-main);
+    }
+
+    /* --- Mobile Responsive Enhancements --- */
+    .mobile-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(2px);
+      z-index: 90;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .mobile-overlay.open {
+      display: block;
+      opacity: 1;
+    }
+    .hamburger-btn {
+      display: none;
+    }
+
+    .mobile-only { display: none; }
+    @media (max-width: 1024px) {
+      .mobile-only { display: inline-flex; }
+      .hamburger-btn {
+        display: inline-flex;
+      }
+      .app-main { 
+        flex-direction: column; 
+      }
+      .scenario-column {
+        overflow-y: auto;
+      }
+      .review-rail { 
+        position: fixed;
+        top: 0;
+        right: -320px;
+        width: 320px;
+        max-width: 85vw;
+        height: 100vh;
+        z-index: 100;
+        transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-left: 1px solid var(--border);
+        border-top: none;
+        box-shadow: -10px 0 25px -5px rgba(0,0,0,0.1);
+      }
+      .review-rail.open {
+        right: 0;
+      }
+      .rail-content {
+        overflow-y: auto;
+      }
+      .form-row { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        padding: 0.75rem 0.5rem;
+        justify-content: space-between;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 50;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+      }
+
+      header.header-hidden {
+        transform: translateY(-100%);
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .header-brand {
+        flex: 1 1 auto;
+        order: 1;
+        font-size: 0.9rem;
+        gap: 0.4rem;
+      }
+      
+      .header-actions {
+        order: 2;
+        gap: 0.25rem;
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+      }
+
+      .action-export {
+        padding: 0.35rem 0.65rem;
+        font-size: 0.75rem;
+      }
+
+      .action-close {
+        padding: 0.35rem 0.65rem;
+        font-size: 0.75rem;
+      }
+
+      .search-container {
+        order: 3;
+        flex: 1 1 100%;
+        max-width: 100%;
+        width: 100%;
+        margin: 0;
+      }
+
+      .global-progress {
+        display: none; /* Hide on mobile to save space */
+      }
+
+      .scenario-column {
+        padding: 1rem;
+      }
+
+      .scenario-header {
+        position: sticky;
+        top: 118px;
+        z-index: 30;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
+        border-radius: var(--radius);
+        max-height: 35vh;
+        overflow-y: auto;
+        transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.2s, margin 0.2s, box-shadow 0.2s;
+      }
+
+      .scenario-header.header-hidden {
+        top: -1rem;
+      }
+
+      .scenario-header.stuck {
+        margin-left: -1rem;
+        margin-right: -1rem;
+        margin-top: 0;
+        border-radius: 0;
+        border-right-width: 0;
+        border-left-width: 0;
+      }
+
+      .response-card {
+        scroll-margin-top: 1rem;
+      }
+
+      .scenario-nav {
+        flex-direction: row;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .scenario-nav > div {
+        width: 100%;
+      }
+
+      .scenario-nav-left {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        gap: 0.75rem;
+      }
+
+      .response-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+
+      .response-body {
+        padding: 1rem;
+      }
+
+      .chat-bubble {
+        max-width: 95%;
+      }
+
+      .chat-meta-row {
+        grid-template-columns: 1fr;
+      }
+
+      .response-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: stretch;
+        padding: 1rem;
+        gap: 0.5rem;
+      }
+
+      .response-actions .btn {
+        flex: 1 1 calc(50% - 0.5rem);
+        width: auto;
+      }
+
+      .response-actions .btn.ghost {
+        flex: 1 1 100%;
+        width: 100%;
+      }
+
+      .edit-grid {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+      }
+
+      .edit-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .edit-controls .btn {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .upload-container {
+        padding: 1.5rem;
+      }
+      
+      .drop-zone {
+        padding: 1.5rem 1rem;
+      }
+      
+      .global-progress {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--text-main);
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-weight: 500;
+      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      gap: 0.75rem;
+      animation: slideUp 0.3s ease forwards;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="toast" class="toast"></div>
+  <div id="mobile-overlay" class="mobile-overlay"></div>
+
+  <!-- Upload Screen -->
+  <div id="upload-screen">
+    <div class="upload-container">
+      <div class="upload-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <h1>Scenario Reviewer</h1>
+      <p>Upload your JSON file to start a high-speed review workflow. Evaluate, edit, and export scenarios seamlessly.</p>
+      
+      <div id="drop-zone" class="drop-zone">
+        <div class="drop-zone-text">Drag & Drop JSON file here</div>
+        <p style="margin-bottom: 1.5rem; font-size: 0.85rem;">or</p>
+        <button class="btn" onclick="document.getElementById('file-input').click()">
+          Browse Files
+        </button>
+        <input type="file" id="file-input" accept=".json" style="display: none" />
+      </div>
+
+      <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+        <button id="load-sample-btn" class="btn secondary">Load Sample Data</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Viewer Screen -->
+  <div id="viewer-screen">
+    
+    <header>
+      <div class="header-brand">
+        <button id="hamburger-btn" class="btn ghost hamburger-btn" style="padding: 0.4rem; margin-right: 0.25rem;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+        Scenario Reviewer
+      </div>
+
+      <div class="search-container">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="search-input" class="search-input" placeholder="Search scenarios, scripts, tags (Press '/' to focus)" autocomplete="off" />
+        <div id="search-results" class="search-results"></div>
+      </div>
+
+      <div class="header-actions">
+        <div class="global-progress" title="Overall Review Progress">
+          <span id="global-progress-text">0 / 0 Reviewed</span>
+          <div class="progress-track">
+            <div id="global-progress-fill" class="progress-fill" style="width: 0%"></div>
+          </div>
+        </div>
+        <button onclick="exportJson()" class="btn secondary action-export">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export
+        </button>
+        <button id="close-btn" class="btn ghost action-close">Close</button>
+      </div>
+    </header>
+
+    <main class="app-main">
+      
+      <!-- Left Column: Scenario & Cards -->
+      <div class="scenario-column" id="scenario-column">
+        <div class="scenario-container">
+          
+          <!-- Scenario Header -->
+          <div class="scenario-header">
+            <div class="scenario-nav">
+              <div class="scenario-nav-left">
+                <span class="scenario-counter" id="scenario-counter">Scenario 1 of 10</span>
+                <div style="display: flex; gap: 0.5rem;">
+                  <button id="prev-btn" class="btn secondary" style="padding: 0.3rem 0.6rem;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                    Prev
+                  </button>
+                  <button id="next-btn" class="btn secondary" style="padding: 0.3rem 0.6rem;">
+                    Next
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div id="scenario-header-content">
+              <!-- Scenario text injected here -->
+            </div>
+          </div>
+          
+          <!-- Responses List -->
+          <div id="responses-container" class="responses-grid">
+            <!-- Response cards injected here -->
+          </div>
+          
+          <!-- Add Button -->
+          <div style="text-align: center; padding: 1rem 0;">
+            <button class="btn ghost" onclick="addResponse()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Response Option
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Right Rail: Review Index -->
+      <aside class="review-rail">
+        <div class="rail-header">
+          <div class="rail-title">Scenario Options</div>
+          <div class="rail-summary" id="rail-summary">0 / 0 Reviewed</div>
+        </div>
+        <div class="rail-content">
+          <ul id="index-list" class="index-list">
+            <!-- Index items injected here -->
+          </ul>
+        </div>
+      </aside>
+
+    </main>
+  </div>
+
+  <script>
+    // State
+    let scenarios = [];
+    let currentIndex = 0;
+    let editingCards = new Set(); // Tracks which response cards are in edit mode
+    let isEditingScenario = false;
+    let isScenarioCollapsed = false; // Mobile collapse state
+
+    const sampleData = [
+      {
+        scenario: "A customer cannot sign in after resetting their password.",
+        responses: [
+          {
+            actions: "Confirm the password reset was completed, check for typing issues, and guide the customer through one clean retry.",
+            captain_says: "I changed my password, but I still cannot log in.",
+            agent_script: "Thanks for letting me know. Please try entering the new password one more time carefully, and make sure Caps Lock is off. If it still fails, I can help you reset it again.",
+            subcategory: "Login Retry",
+            category: "Account Access",
+            notes: "Use calm, step-by-step guidance and avoid assuming the customer made a mistake.",
+            is_valid: null
+          },
+          {
+            actions: "If the issue continues, suggest a fresh password reset and confirm the reset email was received.",
+            captain_says: "I already tried twice and it keeps saying invalid password.",
+            agent_script: "Understood. Let’s do a fresh reset to be safe. Please check whether you received the latest password reset email, and use only the newest link.",
+            subcategory: "Reset Flow",
+            category: "Account Access",
+            notes: "Acknowledge repeated attempts so the user feels heard.",
+            is_valid: null
+          }
+        ]
+      },
+      {
+        scenario: "A customer wants to know when their support request will be resolved.",
+        responses: [
+          {
+            actions: "Set expectations clearly, share the current status, and provide the next update window.",
+            captain_says: "Can you tell me how long this will take?",
+            agent_script: "I can share the latest status. Your request is currently being reviewed, and the next update is expected within one business day.",
+            subcategory: "Status Update",
+            category: "Support Request",
+            notes: "Be transparent about timing and avoid promising an exact resolution time unless confirmed.",
+            is_valid: null
+          }
+        ]
+      }
+    ];
+
+    // DOM Elements
+    const uploadScreen = document.getElementById('upload-screen');
+    const viewerScreen = document.getElementById('viewer-screen');
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const loadSampleBtn = document.getElementById('load-sample-btn');
+    const closeBtn = document.getElementById('close-btn');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const scenarioHeaderContent = document.getElementById('scenario-header-content');
+    const scenarioCounter = document.getElementById('scenario-counter');
+    const responsesContainer = document.getElementById('responses-container');
+    const indexList = document.getElementById('index-list');
+    const railSummary = document.getElementById('rail-summary');
+    const globalProgressText = document.getElementById('global-progress-text');
+    const globalProgressFill = document.getElementById('global-progress-fill');
+    const searchInput = document.getElementById('search-input');
+    const searchResults = document.getElementById('search-results');
+    const toastEl = document.getElementById('toast');
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+    const mobileOverlay = document.getElementById('mobile-overlay');
+    const reviewRail = document.querySelector('.review-rail');
+    let searchActiveIndex = -1;
+
+    // Utility Functions
+    function escapeHtml(unsafe) {
+      if (!unsafe) return '';
+      return String(unsafe)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function showToast(msg, isError = false) {
+      toastEl.innerHTML = isError ? `⚠️ ${msg}` : `✅ ${msg}`;
+      toastEl.style.background = isError ? 'var(--danger)' : 'var(--text-main)';
+      toastEl.style.display = 'flex';
+      setTimeout(() => { toastEl.style.display = 'none'; }, 3000);
+    }
+
+    function getStatusInfo(isValid) {
+      if (isValid === true) return { class: 'valid', text: 'Approved', icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' };
+      if (isValid === false) return { class: 'invalid', text: 'Changes Requested', icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' };
+      return { class: 'unreviewed', text: 'Unreviewed', icon: '' };
+    }
+
+    // Data Processing
+    function processData(data) {
+      if (!Array.isArray(data) || data.length === 0) {
+        showToast("Invalid format: Expected a non-empty array of scenarios.", true);
+        return;
+      }
+
+      data.forEach(s => {
+        if (!s.responses) s.responses = [];
+        s.responses.forEach(r => {
+          if (r.is_valid === undefined) r.is_valid = null;
+        });
+      });
+
+      scenarios = data;
+      currentIndex = 0;
+      editingCards.clear();
+      isEditingScenario = false;
+      
+      uploadScreen.style.display = 'none';
+      viewerScreen.style.display = 'flex';
+      
+      renderCurrentScenario();
+      updateGlobalProgress();
+    }
+
+    function updateGlobalProgress() {
+      let totalResponses = 0;
+      let reviewedResponses = 0;
+      
+      scenarios.forEach(s => {
+        s.responses.forEach(r => {
+          totalResponses++;
+          if (r.is_valid !== null) reviewedResponses++;
+        });
+      });
+
+      const percentage = totalResponses === 0 ? 0 : Math.round((reviewedResponses / totalResponses) * 100);
+      globalProgressText.textContent = `${reviewedResponses} / ${totalResponses} Reviewed`;
+      globalProgressFill.style.width = `${percentage}%`;
+    }
+
+    // Global Handlers
+    window.toggleScenarioEdit = function() {
+      isEditingScenario = !isEditingScenario;
+      renderScenarioHeader();
+    };
+
+    window.toggleScenarioCollapse = function() {
+      isScenarioCollapsed = !isScenarioCollapsed;
+      renderScenarioHeader();
+    };
+
+    window.updateScenarioText = function(val) {
+      scenarios[currentIndex].scenario = val;
+    };
+
+    window.toggleCardEdit = function(idx) {
+      if (editingCards.has(idx)) {
+        editingCards.delete(idx);
+      } else {
+        editingCards.add(idx);
+      }
+      renderCurrentScenario();
+    };
+
+    window.updateField = function(idx, field, val) {
+      scenarios[currentIndex].responses[idx][field] = val;
+    };
+
+    window.reviewOption = function(idx, isValid) {
+      scenarios[currentIndex].responses[idx].is_valid = isValid;
+      editingCards.delete(idx); // close edit mode if open
+      renderCurrentScenario();
+      updateGlobalProgress();
+      
+      // Auto-advance to next unreviewed
+      const nextIdx = scenarios[currentIndex].responses.findIndex(r => r.is_valid === null);
+      if (nextIdx !== -1) {
+        document.getElementById(`response-${nextIdx}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        showToast("All options in this scenario reviewed!");
+      }
+    };
+
+    window.deleteResponse = function(idx) {
+      if (confirm("Delete this response option?")) {
+        scenarios[currentIndex].responses.splice(idx, 1);
+        editingCards.delete(idx);
+        renderCurrentScenario();
+        updateGlobalProgress();
+      }
+    };
+
+    window.addResponse = function() {
+      const newIdx = scenarios[currentIndex].responses.length;
+      scenarios[currentIndex].responses.push({
+        actions: "", captain_says: "", agent_script: "",
+        subcategory: "", category: "", notes: "", is_valid: null
+      });
+      editingCards.add(newIdx); // Open in edit mode
+      renderCurrentScenario();
+      updateGlobalProgress();
+      
+      setTimeout(() => {
+        const col = document.getElementById('scenario-column');
+        col.scrollTop = col.scrollHeight;
+      }, 50);
+    };
+
+    window.exportJson = function() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(scenarios, null, 2));
+      const dlAnchorElem = document.createElement('a');
+      dlAnchorElem.setAttribute("href", dataStr);
+      dlAnchorElem.setAttribute("download", "scenarios_reviewed.json");
+      dlAnchorElem.click();
+      showToast("Exported successfully");
+    };
+
+    // Rendering
+    function renderScenarioHeader() {
+      const scenario = scenarios[currentIndex];
+      const collapsedStyle = isScenarioCollapsed ? 'display: none;' : '';
+      const toggleRotation = isScenarioCollapsed ? '-90deg' : '0deg';
+
+      if (isEditingScenario) {
+        scenarioHeaderContent.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <div class="scenario-label">Edit Scenario</div>
+            <button class="btn success" style="padding: 0.3rem 0.8rem; font-size: 0.75rem;" onclick="toggleScenarioEdit()">Save</button>
+          </div>
+          <textarea class="form-control" style="font-size: 1.1rem; font-weight: 600; min-height: 80px;" onchange="updateScenarioText(this.value)">${escapeHtml(scenario.scenario)}</textarea>
+        `;
+      } else {
+        scenarioHeaderContent.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap: 1rem;">
+            <div style="flex: 1;">
+              <div class="scenario-label" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleScenarioCollapse()">
+                <span>Scenario Context</span>
+                <svg class="mobile-only" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(${toggleRotation}); transition: transform 0.2s;">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+              <div class="scenario-text" style="${collapsedStyle}">${escapeHtml(scenario.scenario || "Untitled Scenario")}</div>
+            </div>
+            <button class="btn ghost" style="padding: 0.4rem; flex-shrink:0; ${collapsedStyle}" onclick="toggleScenarioEdit()" title="Edit Scenario">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    function renderCurrentScenario() {
+      if (scenarios.length === 0) return;
+      const scenario = scenarios[currentIndex];
+      
+      scenarioCounter.textContent = `Scenario ${currentIndex + 1} of ${scenarios.length}`;
+      prevBtn.disabled = currentIndex === 0;
+      nextBtn.disabled = currentIndex === scenarios.length - 1;
+      
+      renderScenarioHeader();
+      
+      responsesContainer.innerHTML = '';
+      indexList.innerHTML = '';
+      
+      const responses = Array.isArray(scenario.responses) ? scenario.responses : [];
+      let reviewedInScenario = 0;
+      
+      if (responses.length === 0) {
+        responsesContainer.innerHTML = `<div class="response-card" style="padding: 3rem; text-align: center; color: var(--text-muted);">No response options available.</div>`;
+      }
+
+      responses.forEach((resp, idx) => {
+        const status = getStatusInfo(resp.is_valid);
+        if (resp.is_valid !== null) reviewedInScenario++;
+        const responseId = `response-${idx}`;
+        
+        // Build Main Card
+        const card = document.createElement('div');
+        card.className = 'response-card';
+        card.id = responseId;
+        
+        if (editingCards.has(idx)) {
+          card.innerHTML = renderEditMode(resp, idx, status);
+        } else {
+          card.innerHTML = renderReadMode(resp, idx, status);
+        }
+        responsesContainer.appendChild(card);
+
+        // Build Right Rail Index Item
+        const iItem = document.createElement('li');
+        iItem.className = 'index-item';
+        iItem.onclick = () => {
+          document.getElementById(responseId).scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if (window.innerWidth <= 1024) {
+            reviewRail.classList.remove('open');
+            mobileOverlay.classList.remove('open');
+          }
+        };
+        
+        iItem.innerHTML = `
+          <div class="index-item-left">
+            <div class="status-icon ${status.class}">${status.icon}</div>
+            <div class="index-label">Option ${idx + 1}</div>
+          </div>
+        `;
+        indexList.appendChild(iItem);
+      });
+
+      railSummary.textContent = `${reviewedInScenario} / ${responses.length} Reviewed`;
+    }
+
+    function renderReadMode(resp, idx, status) {
+      return `
+        <div class="response-header">
+          <div class="response-title">
+            Option ${idx + 1}
+            <span class="badge ${status.class}">${status.text}</span>
+          </div>
+          <div class="tags-row">
+            ${resp.category ? `<span class="tag">${escapeHtml(resp.category)}</span>` : ''}
+            ${resp.subcategory ? `<span class="tag">${escapeHtml(resp.subcategory)}</span>` : ''}
+          </div>
+        </div>
+        
+        <div class="response-body">
+          <div class="evaluation-context">
+            <div class="context-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> Expected Action / Goal</div>
+            <div class="context-text">${escapeHtml(resp.actions || "No specific action defined.")}</div>
+          </div>
+
+          <div class="chat-area">
+            ${renderChatBubble('Captain', resp.captain_says, 'chat-captain')}
+            ${renderChatBubble('Agent', resp.agent_script, 'chat-agent')}
+          </div>
+          
+          ${resp.notes ? `
+          <div class="meta-section">
+            <div class="notes-box">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              <div><strong>Notes:</strong> ${escapeHtml(resp.notes)}</div>
+            </div>
+          </div>` : ''}
+        </div>
+
+        <div class="response-actions">
+          <button class="btn ${resp.is_valid === true ? 'success' : 'secondary'}" onclick="reviewOption(${idx}, true)" style="flex: 1; padding: 0.75rem; height: 52px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+            Approve
+          </button>
+          <button class="btn ${resp.is_valid === false ? 'danger' : 'secondary'}" onclick="reviewOption(${idx}, false)" style="flex: 1; padding: 0.75rem; height: 52px; display: flex; align-items: center; justify-content: center; gap: 0.5rem; line-height: 1.1;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg>
+            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+              <span>Request</span>
+              <span>Changes</span>
+            </div>
+          </button>
+          ${resp.is_valid !== null ? `
+          <button class="btn ghost" onclick="reviewOption(${idx}, null)" title="Undo review status" style="padding: 0.75rem; height: 52px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          </button>` : ''}
+          <div style="flex: 0.2;"></div>
+          <button class="btn ghost" onclick="toggleCardEdit(${idx})" style="padding: 0.75rem; height: 52px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+            Edit
+          </button>
+        </div>
+      `;
+    }
+
+    function renderEditMode(resp, idx, status) {
+      return `
+        <div class="response-header" style="background: var(--surface);">
+          <div class="response-title">Editing Option ${idx + 1}</div>
+          <button class="btn ghost" style="padding: 0.4rem;" onclick="toggleCardEdit(${idx})">Done</button>
+        </div>
+        <div class="response-body" style="background: var(--surface-hover);">
+          <div class="edit-form">
+            <div class="form-group">
+              <label class="form-label">Expected Action / Goal</label>
+              <textarea class="form-control" onchange="updateField(${idx}, 'actions', this.value)">${escapeHtml(resp.actions)}</textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Captain Says</label>
+                <textarea class="form-control" onchange="updateField(${idx}, 'captain_says', this.value)">${escapeHtml(resp.captain_says)}</textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Agent Script</label>
+                <textarea class="form-control" onchange="updateField(${idx}, 'agent_script', this.value)">${escapeHtml(resp.agent_script)}</textarea>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Notes</label>
+              <textarea class="form-control" style="min-height: 60px;" onchange="updateField(${idx}, 'notes', this.value)">${escapeHtml(resp.notes)}</textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Category</label>
+                <input type="text" class="form-control" value="${escapeHtml(resp.category)}" onchange="updateField(${idx}, 'category', this.value)">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Subcategory</label>
+                <input type="text" class="form-control" value="${escapeHtml(resp.subcategory)}" onchange="updateField(${idx}, 'subcategory', this.value)">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="response-actions">
+          <button class="btn danger" onclick="deleteResponse(${idx})">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Delete
+          </button>
+          <div style="flex: 1;"></div>
+          <button class="btn ghost" onclick="reviewOption(${idx}, null)">Reset Status</button>
+          <button class="btn primary" onclick="toggleCardEdit(${idx})">Save & Close</button>
+        </div>
+      `;
+    }
+
+    function renderChatBubble(role, text, className) {
+      if (!text || String(text).trim() === '') {
+        return `<div class="chat-bubble ${className} empty-bubble"><div class="bubble-label">${role}</div><div>No script provided.</div></div>`;
+      }
+      return `
+        <div class="chat-bubble ${className}">
+          <div class="bubble-label">${role}</div>
+          <div>${escapeHtml(text)}</div>
+        </div>
+      `;
+    }
+
+    // Navigation Logic
+    function goNext() {
+      if (currentIndex < scenarios.length - 1) {
+        currentIndex++;
+        renderCurrentScenario();
+        document.getElementById('scenario-column').scrollTop = 0;
+        document.querySelector('.app-main').scrollTop = 0;
+      }
+    }
+
+    function goPrev() {
+      if (currentIndex > 0) {
+        currentIndex--;
+        renderCurrentScenario();
+        document.getElementById('scenario-column').scrollTop = 0;
+        document.querySelector('.app-main').scrollTop = 0;
+      }
+    }
+
+    // Search Logic (Kept from previous version, adapted for new DOM)
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      if (!query) { searchResults.style.display = 'none'; return; }
+
+      const results = [];
+      scenarios.forEach((s, idx) => {
+        let matchFound = false;
+        let snippet = '';
+
+        if (s.scenario && s.scenario.toLowerCase().includes(query)) {
+          matchFound = true;
+          snippet = `Scenario: ${highlightText(s.scenario, query)}`;
+        }
+
+        if (!matchFound) {
+          for (let r of (s.responses || [])) {
+            const searchableFields = [
+              { key: 'captain_says', label: 'Captain' }, { key: 'agent_script', label: 'Agent' },
+              { key: 'actions', label: 'Action' }, { key: 'notes', label: 'Note' },
+              { key: 'category', label: 'Category' }, { key: 'subcategory', label: 'Subcategory' }
+            ];
+            for (let field of searchableFields) {
+              const val = r[field.key];
+              if (val && String(val).toLowerCase().includes(query)) {
+                matchFound = true;
+                snippet = `${field.label}: ${highlightText(String(val), query)}`;
+                break;
+              }
+            }
+            if (matchFound) break;
+          }
+        }
+        if (matchFound) results.push({ index: idx, title: s.scenario || 'Untitled', snippet });
+      });
+
+      if (results.length === 0) {
+        searchResults.innerHTML = '<div class="search-result-item"><div class="search-result-title">No results found</div></div>';
+      } else {
+        searchResults.innerHTML = results.map((r, i) => `
+          <div class="search-result-item" data-index="${r.index}">
+            <div class="search-result-title">Scenario ${r.index + 1}: ${escapeHtml(r.title)}</div>
+            <div class="search-result-snippet">${r.snippet}</div>
+          </div>
+        `).join('');
+      }
+      searchResults.style.display = 'block';
+
+      searchResults.querySelectorAll('.search-result-item[data-index]').forEach(item => {
+        item.addEventListener('click', () => {
+          currentIndex = parseInt(item.getAttribute('data-index'));
+          renderCurrentScenario();
+          searchResults.style.display = 'none';
+          searchInput.value = '';
+        });
+      });
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.search-container')) searchResults.style.display = 'none';
+    });
+
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (viewerScreen.style.display === 'flex') {
+        if (e.key === 'ArrowRight') goNext();
+        if (e.key === 'ArrowLeft') goPrev();
+        if (e.key === '/') {
+          e.preventDefault();
+          searchInput.focus();
+        }
+      }
+    });
+
+    function toggleMobileMenu() {
+      reviewRail.classList.toggle('open');
+      mobileOverlay.classList.toggle('open');
+    }
+
+    hamburgerBtn.addEventListener('click', toggleMobileMenu);
+    mobileOverlay.addEventListener('click', toggleMobileMenu);
+
+    // Mobile Header Hide on Scroll
+    let lastScrollY = 0;
+    const headerEl = document.querySelector('header');
+    const scenarioCol = document.querySelector('.scenario-column');
+    const scenarioHeader = document.querySelector('.scenario-header');
+    
+    scenarioCol.addEventListener('scroll', () => {
+      if (window.innerWidth > 768) return;
+      const currentScrollY = scenarioCol.scrollTop;
+
+      if (currentScrollY > 10) {
+        scenarioHeader.classList.add('stuck');
+      } else {
+        scenarioHeader.classList.remove('stuck');
+      }
+
+      // Prevent jitter by requiring a minimum scroll delta.
+      if (Math.abs(currentScrollY - lastScrollY) < 5) return;
+
+      if (currentScrollY > lastScrollY && currentScrollY > 115) {
+        headerEl.classList.add('header-hidden');
+        scenarioHeader.classList.add('header-hidden');
+      } else if (currentScrollY < lastScrollY) {
+        headerEl.classList.remove('header-hidden');
+        scenarioHeader.classList.remove('header-hidden');
+      }
+
+      if (currentScrollY <= 0) {
+        headerEl.classList.remove('header-hidden');
+        scenarioHeader.classList.remove('header-hidden');
+      }
+
+      lastScrollY = currentScrollY;
+    });
+
+    // Setup
+    closeBtn.addEventListener('click', () => {
+      if (scenarios.length > 0 && !confirm("You have unsaved edits. Close anyway?")) return;
+      scenarios = [];
+      window.removeEventListener('beforeunload', beforeUnloadHandler);
+      viewerScreen.style.display = 'none';
+      uploadScreen.style.display = 'flex';
+      fileInput.value = '';
+    });
+
+    loadSampleBtn.addEventListener('click', () => {
+      processData(JSON.parse(JSON.stringify(sampleData)));
+      window.addEventListener('beforeunload', beforeUnloadHandler);
+    });
+
+    // File Upload Handling
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try { 
+          processData(JSON.parse(event.target.result)); 
+          window.addEventListener('beforeunload', beforeUnloadHandler);
+        }
+        catch (err) { showToast("Invalid JSON file.", true); }
+      };
+      reader.readAsText(file);
+    });
+
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) {
+        const file = e.dataTransfer.files[0];
+        if (file.type === "application/json" || file.name.endsWith(".json")) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            try { 
+              processData(JSON.parse(event.target.result)); 
+              window.addEventListener('beforeunload', beforeUnloadHandler);
+            }
+            catch (err) { showToast("Invalid JSON file.", true); }
+          };
+          reader.readAsText(file);
+        } else {
+          showToast("Please upload a .json file.", true);
+        }
+      }
+    });
+
+    // Prevent accidental navigation
+    function beforeUnloadHandler(e) {
+      if (scenarios.length > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    }
+  </script>
+</body>
+</html>
